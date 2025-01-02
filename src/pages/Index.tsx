@@ -6,6 +6,7 @@ import { Moon, Sun, Globe2 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Language } from "@/utils/translations";
+import { supabase } from "@/lib/supabase";
 import {
   Select,
   SelectContent,
@@ -20,53 +21,62 @@ const Index = () => {
   const { theme, setTheme } = useTheme();
   const { language, setLanguage, t } = useLanguage();
   const [onlineUsers, setOnlineUsers] = useState(0);
+  const [userId] = useState(() => Math.random().toString(36).substring(7));
 
   useEffect(() => {
-    // Создаем уникальный ID для пользователя
-    const userId = Math.random().toString(36).substring(7);
-    
-    // Функция для обновления статуса
-    const updateOnlineStatus = () => {
-      const timestamp = new Date().getTime();
-      localStorage.setItem('user_' + userId, timestamp.toString());
+    const updatePresence = async () => {
+      const { error } = await supabase
+        .from('presence')
+        .upsert({ 
+          id: userId,
+          last_seen: new Date().toISOString(),
+          status: 'online'
+        });
+
+      if (error) console.error('Error updating presence:', error);
     };
 
-    // Обновляем статус каждые 5 секунд
-    const statusInterval = setInterval(updateOnlineStatus, 5000);
-    updateOnlineStatus();
+    // Обновляем статус каждые 30 секунд
+    const interval = setInterval(updatePresence, 30000);
+    updatePresence();
 
-    // Функция для подсчета онлайн пользователей
-    const countOnlineUsers = () => {
-      const now = new Date().getTime();
-      let count = 0;
-      
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key?.startsWith('user_')) {
-          const timestamp = parseInt(localStorage.getItem(key) || '0');
-          // Считаем пользователя онлайн, если его статус обновлялся в последние 10 секунд
-          if (now - timestamp < 10000) {
-            count++;
-          } else {
-            localStorage.removeItem(key);
+    // Подписываемся на изменения в таблице presence
+    const presenceChannel = supabase
+      .channel('presence_db_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'presence'
+        },
+        async () => {
+          // При любом изменении получаем актуальное количество онлайн пользователей
+          const { data, error } = await supabase
+            .from('presence')
+            .select('*')
+            .gte('last_seen', new Date(Date.now() - 60000).toISOString());
+          
+          if (!error && data) {
+            setOnlineUsers(data.length);
           }
         }
-      }
-      
-      setOnlineUsers(count);
-    };
+      )
+      .subscribe();
 
-    // Проверяем количество онлайн пользователей каждые 5 секунд
-    const countInterval = setInterval(countOnlineUsers, 5000);
-    countOnlineUsers();
-
-    // Очистка при размонтировании
     return () => {
-      clearInterval(statusInterval);
-      clearInterval(countInterval);
-      localStorage.removeItem('user_' + userId);
+      clearInterval(interval);
+      presenceChannel.unsubscribe();
+      // Удаляем пользователя при выходе
+      supabase
+        .from('presence')
+        .delete()
+        .match({ id: userId })
+        .then(({ error }) => {
+          if (error) console.error('Error removing presence:', error);
+        });
     };
-  }, []);
+  }, [userId]);
 
   const handleJoin = async (settings: { video: boolean; audio: boolean }) => {
     try {
@@ -76,17 +86,33 @@ const Index = () => {
       });
       setLocalStream(stream);
       setIsInRoom(true);
+
+      // Обновляем статус пользователя как "ready"
+      const { error } = await supabase
+        .from('presence')
+        .update({ status: 'ready' })
+        .match({ id: userId });
+
+      if (error) console.error('Error updating status:', error);
     } catch (error) {
       console.error("Error accessing media devices:", error);
     }
   };
 
-  const handleLeave = () => {
+  const handleLeave = async () => {
     if (localStream) {
       localStream.getTracks().forEach((track) => track.stop());
     }
     setLocalStream(null);
     setIsInRoom(false);
+
+    // Обновляем статус пользователя обратно на "online"
+    const { error } = await supabase
+      .from('presence')
+      .update({ status: 'online' })
+      .match({ id: userId });
+
+    if (error) console.error('Error updating status:', error);
   };
 
   const handleNext = () => {
