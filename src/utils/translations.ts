@@ -9,7 +9,8 @@ export const translations = {
     newPartner: "You're now chatting with a new stranger.",
     joinNow: "Join Now",
     next: "Next",
-    leave: "Leave"
+    leave: "Leave",
+    noUsersOnline: "No users online at the moment. Please wait for someone to join."
   },
   es: {
     title: "Ruleta de Video Chat",
@@ -21,7 +22,8 @@ export const translations = {
     newPartner: "Ahora estás chateando con un nuevo desconocido.",
     joinNow: "Unirse ahora",
     next: "Siguiente",
-    leave: "Salir"
+    leave: "Salir",
+    noUsersOnline: "No hay usuarios en línea en este momento. Espera a que alguien se una."
   },
   pt: {
     title: "Roleta de Video Chat",
@@ -33,7 +35,8 @@ export const translations = {
     newPartner: "Você está conversando com um novo desconhecido.",
     joinNow: "Entrar Agora",
     next: "Próximo",
-    leave: "Sair"
+    leave: "Sair",
+    noUsersOnline: "Não há usuários online no momento. Aguarde alguém entrar."
   },
   ru: {
     title: "Видеочат Рулетка",
@@ -45,7 +48,8 @@ export const translations = {
     newPartner: "Вы общаетесь с новым незнакомцем.",
     joinNow: "Присоединиться",
     next: "Следующий",
-    leave: "Выйти"
+    leave: "Выйти",
+    noUsersOnline: "Сейчас нет пользователей онлайн. Подождите, пока кто-нибудь присоединится."
   }
 };
 

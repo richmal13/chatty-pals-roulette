@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import VideoPreview from "@/components/VideoPreview";
 import VideoChatRoom from "@/components/VideoChatRoom";
 import { Button } from "@/components/ui/button";
@@ -19,7 +19,54 @@ const Index = () => {
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const { theme, setTheme } = useTheme();
   const { language, setLanguage, t } = useLanguage();
-  const [onlineUsers] = useState(Math.floor(Math.random() * 1000) + 500); // Simulated online users count
+  const [onlineUsers, setOnlineUsers] = useState(0);
+
+  useEffect(() => {
+    // Создаем уникальный ID для пользователя
+    const userId = Math.random().toString(36).substring(7);
+    
+    // Функция для обновления статуса
+    const updateOnlineStatus = () => {
+      const timestamp = new Date().getTime();
+      localStorage.setItem('user_' + userId, timestamp.toString());
+    };
+
+    // Обновляем статус каждые 5 секунд
+    const statusInterval = setInterval(updateOnlineStatus, 5000);
+    updateOnlineStatus();
+
+    // Функция для подсчета онлайн пользователей
+    const countOnlineUsers = () => {
+      const now = new Date().getTime();
+      let count = 0;
+      
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key?.startsWith('user_')) {
+          const timestamp = parseInt(localStorage.getItem(key) || '0');
+          // Считаем пользователя онлайн, если его статус обновлялся в последние 10 секунд
+          if (now - timestamp < 10000) {
+            count++;
+          } else {
+            localStorage.removeItem(key);
+          }
+        }
+      }
+      
+      setOnlineUsers(count);
+    };
+
+    // Проверяем количество онлайн пользователей каждые 5 секунд
+    const countInterval = setInterval(countOnlineUsers, 5000);
+    countOnlineUsers();
+
+    // Очистка при размонтировании
+    return () => {
+      clearInterval(statusInterval);
+      clearInterval(countInterval);
+      localStorage.removeItem('user_' + userId);
+    };
+  }, []);
 
   const handleJoin = async (settings: { video: boolean; audio: boolean }) => {
     try {
@@ -80,7 +127,7 @@ const Index = () => {
         <h1 className="text-3xl font-bold">{t("title")}</h1>
         <p className="text-muted-foreground mt-2">{t("subtitle")}</p>
         <p className="text-primary mt-2">
-          {onlineUsers.toLocaleString()} {t("onlineUsers")}
+          {onlineUsers} {t("onlineUsers")}
         </p>
       </header>
 
@@ -92,6 +139,7 @@ const Index = () => {
             localStream={localStream}
             onNext={handleNext}
             onLeave={handleLeave}
+            onlineUsers={onlineUsers}
           />
         )}
       </main>

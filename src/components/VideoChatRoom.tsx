@@ -9,15 +9,17 @@ interface VideoChatRoomProps {
   localStream: MediaStream | null;
   onNext: () => void;
   onLeave: () => void;
+  onlineUsers: number;
 }
 
 const VideoChatRoom: React.FC<VideoChatRoomProps> = ({
   localStream,
   onNext,
   onLeave,
+  onlineUsers,
 }) => {
   const { toast } = useToast();
-  const { t, language } = useLanguage();
+  const { t } = useLanguage();
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
   const [hasVideo, setHasVideo] = useState(true);
@@ -29,6 +31,11 @@ const VideoChatRoom: React.FC<VideoChatRoomProps> = ({
       localVideoRef.current.srcObject = localStream;
     }
 
+    if (onlineUsers <= 1) {
+      setIsSearching(true);
+      return;
+    }
+
     const timeout = setTimeout(() => {
       setIsSearching(false);
       toast({
@@ -38,7 +45,7 @@ const VideoChatRoom: React.FC<VideoChatRoomProps> = ({
     }, Math.random() * 2000 + 1000);
 
     return () => clearTimeout(timeout);
-  }, [localStream]);
+  }, [localStream, onlineUsers]);
 
   const toggleVideo = () => {
     if (localStream) {
@@ -93,8 +100,14 @@ const VideoChatRoom: React.FC<VideoChatRoomProps> = ({
           {isSearching ? (
             <div className="absolute inset-0 flex items-center justify-center bg-muted">
               <div className="text-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-                <p className="text-muted-foreground">{t("findingPartner")}</p>
+                {onlineUsers <= 1 ? (
+                  <p className="text-muted-foreground">{t("noUsersOnline")}</p>
+                ) : (
+                  <>
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+                    <p className="text-muted-foreground">{t("findingPartner")}</p>
+                  </>
+                )}
               </div>
             </div>
           ) : (
