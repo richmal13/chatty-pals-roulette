@@ -7,17 +7,9 @@ import VoiceTranslation from "./VoiceTranslation";
 import { WebRTCConnection } from "@/utils/webRTC";
 import { supabase } from "@/integrations/supabase/client";
 import { Database } from "@/integrations/supabase/types";
+import { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
 
 type PresenceRow = Database['public']['Tables']['presence']['Row'];
-type RealtimePostgresChangesPayload<T> = {
-  commit_timestamp: string;
-  errors: unknown[] | null;
-  schema: string;
-  table: string;
-  type: 'INSERT' | 'UPDATE' | 'DELETE';
-  old: T;
-  new: T;
-};
 
 interface VideoChatRoomProps {
   localStream: MediaStream | null;
@@ -65,7 +57,7 @@ const VideoChatRoom: React.FC<VideoChatRoomProps> = ({
 
     const channel = supabase
       .channel('presence_rtc')
-      .on(
+      .on<PresenceRow>(
         'postgres_changes',
         {
           event: '*',
