@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Video, VideoOff, Mic, MicOff, SkipForward } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { useLanguage } from "@/contexts/LanguageContext";
+import VoiceTranslation from "./VoiceTranslation";
 
 interface VideoChatRoomProps {
   localStream: MediaStream | null;
@@ -16,12 +17,13 @@ const VideoChatRoom: React.FC<VideoChatRoomProps> = ({
   onLeave,
 }) => {
   const { toast } = useToast();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
   const [hasVideo, setHasVideo] = useState(true);
   const [hasAudio, setHasAudio] = useState(true);
   const [isSearching, setIsSearching] = useState(true);
+  const [translatedText, setTranslatedText] = useState<string>("");
 
   useEffect(() => {
     if (localVideoRef.current && localStream) {
@@ -71,6 +73,12 @@ const VideoChatRoom: React.FC<VideoChatRoomProps> = ({
     }, Math.random() * 2000 + 1000);
   };
 
+  const handleTranslatedText = (text: string) => {
+    setTranslatedText(text);
+    // Here you would typically send this translated text to the other participant
+    // through your WebRTC data channel
+  };
+
   return (
     <div className="flex flex-col items-center gap-6 p-4">
       <div className="relative w-full max-w-6xl grid grid-cols-2 gap-4">
@@ -98,12 +106,19 @@ const VideoChatRoom: React.FC<VideoChatRoomProps> = ({
               </div>
             </div>
           ) : (
-            <video
-              ref={remoteVideoRef}
-              autoPlay
-              playsInline
-              className="w-full h-full object-cover"
-            />
+            <>
+              <video
+                ref={remoteVideoRef}
+                autoPlay
+                playsInline
+                className="w-full h-full object-cover"
+              />
+              {translatedText && (
+                <div className="absolute bottom-0 left-0 right-0 p-4 bg-black/50 text-white">
+                  {translatedText}
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>
@@ -129,6 +144,10 @@ const VideoChatRoom: React.FC<VideoChatRoomProps> = ({
         >
           {hasAudio ? <Mic className="h-5 w-5" /> : <MicOff className="h-5 w-5" />}
         </Button>
+        <VoiceTranslation
+          targetLanguage={language}
+          onTranslatedText={handleTranslatedText}
+        />
         <Button onClick={handleNext} className="gap-2">
           <SkipForward className="h-5 w-5" />
           {t("next")}
