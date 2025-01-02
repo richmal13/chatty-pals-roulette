@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Video, VideoOff, Mic, MicOff, SkipForward } from "lucide-react";
+import { Video, VideoOff } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { useLanguage } from "@/contexts/LanguageContext";
 import VoiceTranslation from "./VoiceTranslation";
@@ -21,7 +21,6 @@ const VideoChatRoom: React.FC<VideoChatRoomProps> = ({
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
   const [hasVideo, setHasVideo] = useState(true);
-  const [hasAudio, setHasAudio] = useState(true);
   const [isSearching, setIsSearching] = useState(true);
   const [translatedText, setTranslatedText] = useState<string>("");
 
@@ -47,16 +46,6 @@ const VideoChatRoom: React.FC<VideoChatRoomProps> = ({
       if (videoTrack) {
         videoTrack.enabled = !hasVideo;
         setHasVideo(!hasVideo);
-      }
-    }
-  };
-
-  const toggleAudio = () => {
-    if (localStream) {
-      const audioTrack = localStream.getAudioTracks()[0];
-      if (audioTrack) {
-        audioTrack.enabled = !hasAudio;
-        setHasAudio(!hasAudio);
       }
     }
   };
@@ -135,14 +124,6 @@ const VideoChatRoom: React.FC<VideoChatRoomProps> = ({
           ) : (
             <VideoOff className="h-5 w-5" />
           )}
-        </Button>
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={toggleAudio}
-          className={!hasAudio ? "bg-muted" : ""}
-        >
-          {hasAudio ? <Mic className="h-5 w-5" /> : <MicOff className="h-5 w-5" />}
         </Button>
         <VoiceTranslation
           targetLanguage={language}
