@@ -10,7 +10,9 @@ export const translations = {
     joinNow: "Join Now",
     next: "Next",
     leave: "Leave",
-    noUsersOnline: "No users online at the moment. Please wait for someone to join."
+    noUsersOnline: "No users online at the moment. Please wait for someone to join.",
+    error: "Error",
+    mediaAccessError: "Error accessing media devices. Please check your camera and microphone permissions.",
   },
   es: {
     title: "Ruleta de Video Chat",
@@ -23,7 +25,9 @@ export const translations = {
     joinNow: "Unirse ahora",
     next: "Siguiente",
     leave: "Salir",
-    noUsersOnline: "No hay usuarios en línea en este momento. Espera a que alguien se una."
+    noUsersOnline: "No hay usuarios en línea en este momento. Espera a que alguien se una.",
+    error: "Error",
+    mediaAccessError: "Error al acceder a los dispositivos multimedia. Por favor, verifica los permisos de tu cámara y micrófono.",
   },
   pt: {
     title: "Roleta de Video Chat",
@@ -36,7 +40,9 @@ export const translations = {
     joinNow: "Entrar Agora",
     next: "Próximo",
     leave: "Sair",
-    noUsersOnline: "Não há usuários online no momento. Aguarde alguém entrar."
+    noUsersOnline: "Não há usuários online no momento. Aguarde alguém entrar.",
+    error: "Erro",
+    mediaAccessError: "Erro ao acessar dispositivos de mídia. Verifique as permissões da sua câmera e microfone.",
   },
   ru: {
     title: "Видеочат Рулетка",
@@ -49,7 +55,9 @@ export const translations = {
     joinNow: "Присоединиться",
     next: "Следующий",
     leave: "Выйти",
-    noUsersOnline: "Сейчас нет пользователей онлайн. Подождите, пока кто-нибудь присоединится."
+    noUsersOnline: "Сейчас нет пользователей онлайн. Подождите, пока кто-нибудь присоединится.",
+    error: "Ошибка",
+    mediaAccessError: "Ошибка доступа к медиа-устройствам. Пожалуйста, проверьте разрешения для камеры и микрофона.",
   }
 };
 

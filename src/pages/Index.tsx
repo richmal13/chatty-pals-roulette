@@ -7,6 +7,7 @@ import { useTheme } from "next-themes";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Language } from "@/utils/translations";
 import { supabase } from "@/integrations/supabase/client";
+import { usePartnerMatching } from "@/hooks/usePartnerMatching";
 import {
   Select,
   SelectContent,
@@ -24,6 +25,7 @@ const Index = () => {
   const [onlineUsers, setOnlineUsers] = useState(0);
   const [userId] = useState(() => Math.random().toString(36).substring(7));
   const { toast } = useToast();
+  const { findPartner } = usePartnerMatching(userId);
 
   useEffect(() => {
     const updatePresence = async () => {
@@ -107,6 +109,14 @@ const Index = () => {
         })
         .eq('id', userId);
 
+      const partnerInfo = await findPartner();
+      if (partnerInfo) {
+        toast({
+          title: t("connected"),
+          description: t("connectedDesc"),
+        });
+      }
+
     } catch (error) {
       console.error("Error accessing media devices:", error);
       toast({
@@ -144,6 +154,14 @@ const Index = () => {
         partner_id: null
       })
       .eq('id', userId);
+
+    const partnerInfo = await findPartner();
+    if (partnerInfo) {
+      toast({
+        title: t("connected"),
+        description: t("newPartner"),
+      });
+    }
   };
 
   return (
