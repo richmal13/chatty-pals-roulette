@@ -59,7 +59,7 @@ const VideoPreview: React.FC<VideoPreviewProps> = ({ onJoin }) => {
 
   return (
     <div className="flex flex-col items-center gap-6 p-4">
-      <div className="relative w-full max-w-2xl aspect-video rounded-lg overflow-hidden bg-gray-900">
+      <div className="relative w-full max-w-2xl aspect-video rounded-lg overflow-hidden bg-muted">
         <video
           ref={videoRef}
           autoPlay
@@ -68,8 +68,8 @@ const VideoPreview: React.FC<VideoPreviewProps> = ({ onJoin }) => {
           className="w-full h-full object-cover"
         />
         {!hasVideo && (
-          <div className="absolute inset-0 flex items-center justify-center bg-gray-800">
-            <VideoOff className="w-16 h-16 text-gray-400" />
+          <div className="absolute inset-0 flex items-center justify-center bg-muted">
+            <VideoOff className="w-16 h-16 text-muted-foreground" />
           </div>
         )}
       </div>
@@ -79,7 +79,7 @@ const VideoPreview: React.FC<VideoPreviewProps> = ({ onJoin }) => {
           variant="outline"
           size="icon"
           onClick={toggleVideo}
-          className={!hasVideo ? "bg-gray-200" : ""}
+          className={!hasVideo ? "bg-muted" : ""}
         >
           {hasVideo ? (
             <Video className="h-5 w-5" />
@@ -91,7 +91,7 @@ const VideoPreview: React.FC<VideoPreviewProps> = ({ onJoin }) => {
           variant="outline"
           size="icon"
           onClick={toggleAudio}
-          className={!hasAudio ? "bg-gray-200" : ""}
+          className={!hasAudio ? "bg-muted" : ""}
         >
           {hasAudio ? <Mic className="h-5 w-5" /> : <MicOff className="h-5 w-5" />}
         </Button>

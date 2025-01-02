@@ -75,7 +75,7 @@ const VideoChatRoom: React.FC<VideoChatRoomProps> = ({
     <div className="flex flex-col items-center gap-6 p-4">
       <div className="relative w-full max-w-6xl grid grid-cols-2 gap-4">
         {/* Local Video */}
-        <div className="relative aspect-video rounded-lg overflow-hidden bg-gray-900">
+        <div className="relative aspect-video rounded-lg overflow-hidden bg-muted">
           <video
             ref={localVideoRef}
             autoPlay
@@ -84,19 +84,19 @@ const VideoChatRoom: React.FC<VideoChatRoomProps> = ({
             className="w-full h-full object-cover"
           />
           {!hasVideo && (
-            <div className="absolute inset-0 flex items-center justify-center bg-gray-800">
-              <VideoOff className="w-16 h-16 text-gray-400" />
+            <div className="absolute inset-0 flex items-center justify-center bg-muted">
+              <VideoOff className="w-16 h-16 text-muted-foreground" />
             </div>
           )}
         </div>
 
         {/* Remote Video */}
-        <div className="relative aspect-video rounded-lg overflow-hidden bg-gray-900">
+        <div className="relative aspect-video rounded-lg overflow-hidden bg-muted">
           {isSearching ? (
-            <div className="absolute inset-0 flex items-center justify-center bg-gray-800">
+            <div className="absolute inset-0 flex items-center justify-center bg-muted">
               <div className="text-center">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-                <p className="text-gray-400">Finding a partner...</p>
+                <p className="text-muted-foreground">Finding a partner...</p>
               </div>
             </div>
           ) : (
@@ -115,7 +115,7 @@ const VideoChatRoom: React.FC<VideoChatRoomProps> = ({
           variant="outline"
           size="icon"
           onClick={toggleVideo}
-          className={!hasVideo ? "bg-gray-200" : ""}
+          className={!hasVideo ? "bg-muted" : ""}
         >
           {hasVideo ? (
             <Video className="h-5 w-5" />
@@ -127,7 +127,7 @@ const VideoChatRoom: React.FC<VideoChatRoomProps> = ({
           variant="outline"
           size="icon"
           onClick={toggleAudio}
-          className={!hasAudio ? "bg-gray-200" : ""}
+          className={!hasAudio ? "bg-muted" : ""}
         >
           {hasAudio ? <Mic className="h-5 w-5" /> : <MicOff className="h-5 w-5" />}
         </Button>
