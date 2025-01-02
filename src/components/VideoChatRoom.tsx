@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Video, VideoOff, Mic, MicOff, SkipForward } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface VideoChatRoomProps {
   localStream: MediaStream | null;
@@ -15,6 +16,7 @@ const VideoChatRoom: React.FC<VideoChatRoomProps> = ({
   onLeave,
 }) => {
   const { toast } = useToast();
+  const { t } = useLanguage();
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
   const [hasVideo, setHasVideo] = useState(true);
@@ -26,12 +28,11 @@ const VideoChatRoom: React.FC<VideoChatRoomProps> = ({
       localVideoRef.current.srcObject = localStream;
     }
 
-    // Simulate finding a partner after a random delay (1-3 seconds)
     const timeout = setTimeout(() => {
       setIsSearching(false);
       toast({
-        title: "Connected!",
-        description: "You're now chatting with a stranger.",
+        title: t("connected"),
+        description: t("connectedDesc"),
       });
     }, Math.random() * 2000 + 1000);
 
@@ -61,12 +62,11 @@ const VideoChatRoom: React.FC<VideoChatRoomProps> = ({
   const handleNext = () => {
     setIsSearching(true);
     onNext();
-    // Simulate finding a new partner
     setTimeout(() => {
       setIsSearching(false);
       toast({
-        title: "Connected!",
-        description: "You're now chatting with a new stranger.",
+        title: t("connected"),
+        description: t("newPartner"),
       });
     }, Math.random() * 2000 + 1000);
   };
@@ -74,7 +74,6 @@ const VideoChatRoom: React.FC<VideoChatRoomProps> = ({
   return (
     <div className="flex flex-col items-center gap-6 p-4">
       <div className="relative w-full max-w-6xl grid grid-cols-2 gap-4">
-        {/* Local Video */}
         <div className="relative aspect-video rounded-lg overflow-hidden bg-muted">
           <video
             ref={localVideoRef}
@@ -90,13 +89,12 @@ const VideoChatRoom: React.FC<VideoChatRoomProps> = ({
           )}
         </div>
 
-        {/* Remote Video */}
         <div className="relative aspect-video rounded-lg overflow-hidden bg-muted">
           {isSearching ? (
             <div className="absolute inset-0 flex items-center justify-center bg-muted">
               <div className="text-center">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-                <p className="text-muted-foreground">Finding a partner...</p>
+                <p className="text-muted-foreground">{t("findingPartner")}</p>
               </div>
             </div>
           ) : (
@@ -133,10 +131,10 @@ const VideoChatRoom: React.FC<VideoChatRoomProps> = ({
         </Button>
         <Button onClick={handleNext} className="gap-2">
           <SkipForward className="h-5 w-5" />
-          Next
+          {t("next")}
         </Button>
         <Button variant="destructive" onClick={onLeave}>
-          Leave
+          {t("leave")}
         </Button>
       </div>
     </div>

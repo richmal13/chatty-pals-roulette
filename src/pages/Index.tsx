@@ -2,13 +2,24 @@ import { useState } from "react";
 import VideoPreview from "@/components/VideoPreview";
 import VideoChatRoom from "@/components/VideoChatRoom";
 import { Button } from "@/components/ui/button";
-import { Moon, Sun } from "lucide-react";
+import { Moon, Sun, Globe2 } from "lucide-react";
 import { useTheme } from "next-themes";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { Language } from "@/utils/translations";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const Index = () => {
   const [isInRoom, setIsInRoom] = useState(false);
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const { theme, setTheme } = useTheme();
+  const { language, setLanguage, t } = useLanguage();
+  const [onlineUsers] = useState(Math.floor(Math.random() * 1000) + 500); // Simulated online users count
 
   const handleJoin = async (settings: { video: boolean; audio: boolean }) => {
     try {
@@ -36,23 +47,40 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background transition-colors duration-300">
+    <div className="min-h-screen bg-background text-foreground transition-colors duration-300">
       <header className="p-4 text-center relative">
-        <Button
-          variant="outline"
-          size="icon"
-          className="absolute right-4 top-4"
-          onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-        >
-          {theme === "dark" ? (
-            <Sun className="h-5 w-5" />
-          ) : (
-            <Moon className="h-5 w-5" />
-          )}
-        </Button>
-        <h1 className="text-3xl font-bold text-foreground">Video Chat Roulette</h1>
-        <p className="text-muted-foreground mt-2">
-          Meet new people through random video chats
+        <div className="absolute right-4 top-4 flex gap-2">
+          <Select
+            value={language}
+            onValueChange={(value: Language) => setLanguage(value)}
+          >
+            <SelectTrigger className="w-[140px]">
+              <Globe2 className="mr-2 h-4 w-4" />
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="en">English</SelectItem>
+              <SelectItem value="es">Español</SelectItem>
+              <SelectItem value="pt">Português</SelectItem>
+              <SelectItem value="ru">Русский</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+          >
+            {theme === "dark" ? (
+              <Sun className="h-5 w-5" />
+            ) : (
+              <Moon className="h-5 w-5" />
+            )}
+          </Button>
+        </div>
+        <h1 className="text-3xl font-bold">{t("title")}</h1>
+        <p className="text-muted-foreground mt-2">{t("subtitle")}</p>
+        <p className="text-primary mt-2">
+          {onlineUsers.toLocaleString()} {t("onlineUsers")}
         </p>
       </header>
 

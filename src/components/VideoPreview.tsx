@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Video, VideoOff, Mic, MicOff } from "lucide-react";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface VideoPreviewProps {
   onJoin: (settings: { video: boolean; audio: boolean }) => void;
@@ -11,6 +12,7 @@ const VideoPreview: React.FC<VideoPreviewProps> = ({ onJoin }) => {
   const [hasVideo, setHasVideo] = useState(true);
   const [hasAudio, setHasAudio] = useState(true);
   const [stream, setStream] = useState<MediaStream | null>(null);
+  const { t } = useLanguage();
 
   useEffect(() => {
     const initStream = async () => {
@@ -99,7 +101,7 @@ const VideoPreview: React.FC<VideoPreviewProps> = ({ onJoin }) => {
           onClick={() => onJoin({ video: hasVideo, audio: hasAudio })}
           className="px-8"
         >
-          Join Now
+          {t("joinNow")}
         </Button>
       </div>
     </div>
