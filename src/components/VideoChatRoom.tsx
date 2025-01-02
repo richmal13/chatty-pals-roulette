@@ -6,6 +6,18 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import VoiceTranslation from "./VoiceTranslation";
 import { WebRTCConnection } from "@/utils/webRTC";
 import { supabase } from "@/integrations/supabase/client";
+import { Database } from "@/integrations/supabase/types";
+
+type PresenceRow = Database['public']['Tables']['presence']['Row'];
+type RealtimePostgresChangesPayload<T> = {
+  commit_timestamp: string;
+  errors: unknown[] | null;
+  schema: string;
+  table: string;
+  type: 'INSERT' | 'UPDATE' | 'DELETE';
+  old: T;
+  new: T;
+};
 
 interface VideoChatRoomProps {
   localStream: MediaStream | null;
@@ -34,10 +46,10 @@ const VideoChatRoom: React.FC<VideoChatRoomProps> = ({
     if (localVideoRef.current && localStream) {
       localVideoRef.current.srcObject = localStream;
       
-      // Initialize WebRTC connection
       webRTCRef.current = new WebRTCConnection(userId, (remoteStream) => {
         if (remoteVideoRef.current) {
           remoteVideoRef.current.srcObject = remoteStream;
+          setIsSearching(false);
         }
       });
       webRTCRef.current.addLocalStream(localStream);
@@ -60,8 +72,8 @@ const VideoChatRoom: React.FC<VideoChatRoomProps> = ({
           schema: 'public',
           table: 'presence',
         },
-        async (payload) => {
-          const { new: newData } = payload;
+        async (payload: RealtimePostgresChangesPayload<PresenceRow>) => {
+          const newData = payload.new;
           
           if (newData.partner_id === userId) {
             if (newData.sdp_offer && !newData.sdp_answer) {
@@ -73,7 +85,7 @@ const VideoChatRoom: React.FC<VideoChatRoomProps> = ({
           }
 
           if (newData.id === userId && newData.partner_id) {
-            webRTCRef.current?.setRoomInfo(newData.room_id, newData.partner_id);
+            webRTCRef.current?.setRoomInfo(newData.room_id || '', newData.partner_id);
             await webRTCRef.current?.createOffer();
           }
         }

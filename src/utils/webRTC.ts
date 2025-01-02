@@ -1,4 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
+import { Database } from "@/integrations/supabase/types";
+
+type PresenceRow = Database['public']['Tables']['presence']['Row'];
 
 export class WebRTCConnection {
   private peerConnection: RTCPeerConnection;
@@ -29,19 +32,17 @@ export class WebRTCConnection {
     };
   }
 
-  async addLocalStream(stream: MediaStream) {
-    stream.getTracks().forEach((track) => {
-      this.peerConnection.addTrack(track, stream);
-    });
-  }
-
   private async sendIceCandidate(candidate: RTCIceCandidate) {
-    if (!this.roomId) return;
-
     await supabase.from("presence").update({
       ice_candidate: JSON.stringify(candidate),
       ice_candidate_timestamp: new Date().toISOString(),
     }).eq("id", this.userId);
+  }
+
+  async addLocalStream(stream: MediaStream) {
+    stream.getTracks().forEach((track) => {
+      this.peerConnection.addTrack(track, stream);
+    });
   }
 
   async createOffer() {
@@ -94,17 +95,7 @@ export class WebRTCConnection {
     this.partnerId = partnerId;
   }
 
-  async cleanup() {
+  cleanup() {
     this.peerConnection.close();
-    if (this.userId) {
-      await supabase.from("presence").update({
-        sdp_offer: null,
-        sdp_answer: null,
-        ice_candidate: null,
-        sdp_offer_timestamp: null,
-        sdp_answer_timestamp: null,
-        ice_candidate_timestamp: null,
-      }).eq("id", this.userId);
-    }
   }
 }

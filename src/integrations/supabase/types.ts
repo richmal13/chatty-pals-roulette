@@ -11,27 +11,45 @@ export type Database = {
     Tables: {
       presence: {
         Row: {
+          ice_candidate: string | null
+          ice_candidate_timestamp: string | null
           id: string
           is_waiting: boolean | null
           last_seen: string
           partner_id: string | null
           room_id: string | null
+          sdp_answer: string | null
+          sdp_answer_timestamp: string | null
+          sdp_offer: string | null
+          sdp_offer_timestamp: string | null
           status: string | null
         }
         Insert: {
+          ice_candidate?: string | null
+          ice_candidate_timestamp?: string | null
           id: string
           is_waiting?: boolean | null
           last_seen?: string
           partner_id?: string | null
           room_id?: string | null
+          sdp_answer?: string | null
+          sdp_answer_timestamp?: string | null
+          sdp_offer?: string | null
+          sdp_offer_timestamp?: string | null
           status?: string | null
         }
         Update: {
+          ice_candidate?: string | null
+          ice_candidate_timestamp?: string | null
           id?: string
           is_waiting?: boolean | null
           last_seen?: string
           partner_id?: string | null
           room_id?: string | null
+          sdp_answer?: string | null
+          sdp_answer_timestamp?: string | null
+          sdp_offer?: string | null
+          sdp_offer_timestamp?: string | null
           status?: string | null
         }
         Relationships: []
