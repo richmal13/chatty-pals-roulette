@@ -14,6 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useToast } from "@/components/ui/use-toast";
 
 const Index = () => {
   const [isInRoom, setIsInRoom] = useState(false);
@@ -22,6 +23,7 @@ const Index = () => {
   const { language, setLanguage, t } = useLanguage();
   const [onlineUsers, setOnlineUsers] = useState(0);
   const [userId] = useState(() => Math.random().toString(36).substring(7));
+  const { toast } = useToast();
 
   useEffect(() => {
     const updatePresence = async () => {
@@ -30,17 +32,16 @@ const Index = () => {
         .upsert({ 
           id: userId,
           last_seen: new Date().toISOString(),
-          status: 'online'
+          status: 'online',
+          is_waiting: false
         });
 
       if (error) console.error('Error updating presence:', error);
     };
 
-    // Обновляем статус каждые 30 секунд
     const interval = setInterval(updatePresence, 30000);
     updatePresence();
 
-    // Подписываемся на изменения в таблице presence
     const presenceChannel = supabase
       .channel('presence_db_changes')
       .on(
@@ -51,7 +52,6 @@ const Index = () => {
           table: 'presence'
         },
         async () => {
-          // При любом изменении получаем актуальное количество онлайн пользователей
           const { data, error } = await supabase
             .from('presence')
             .select('*')
@@ -67,7 +67,6 @@ const Index = () => {
     return () => {
       clearInterval(interval);
       presenceChannel.unsubscribe();
-      // Удаляем пользователя при выходе
       supabase
         .from('presence')
         .delete()
@@ -78,6 +77,73 @@ const Index = () => {
     };
   }, [userId]);
 
+  const findPartner = async () => {
+    // Ищем пользователя, который ожидает партнера
+    const { data: waitingUsers, error: findError } = await supabase
+      .from('presence')
+      .select('*')
+      .eq('is_waiting', true)
+      .neq('id', userId)
+      .gte('last_seen', new Date(Date.now() - 30000).toISOString())
+      .limit(1);
+
+    if (findError) {
+      console.error('Error finding partner:', findError);
+      return null;
+    }
+
+    if (waitingUsers && waitingUsers.length > 0) {
+      const partner = waitingUsers[0];
+      const roomId = `room_${Math.random().toString(36).substring(7)}`;
+
+      // Обновляем статус обоих пользователей
+      const updates = [
+        {
+          id: userId,
+          room_id: roomId,
+          is_waiting: false,
+          partner_id: partner.id
+        },
+        {
+          id: partner.id,
+          room_id: roomId,
+          is_waiting: false,
+          partner_id: userId
+        }
+      ];
+
+      for (const update of updates) {
+        const { error: updateError } = await supabase
+          .from('presence')
+          .update(update)
+          .eq('id', update.id);
+
+        if (updateError) {
+          console.error('Error updating user status:', updateError);
+          return null;
+        }
+      }
+
+      return { roomId, partnerId: partner.id };
+    }
+
+    // Если партнер не найден, устанавливаем статус ожидания
+    const { error: waitError } = await supabase
+      .from('presence')
+      .update({ 
+        is_waiting: true,
+        room_id: null,
+        partner_id: null
+      })
+      .eq('id', userId);
+
+    if (waitError) {
+      console.error('Error updating waiting status:', waitError);
+    }
+
+    return null;
+  };
+
   const handleJoin = async (settings: { video: boolean; audio: boolean }) => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -87,13 +153,13 @@ const Index = () => {
       setLocalStream(stream);
       setIsInRoom(true);
 
-      // Обновляем статус пользователя как "ready"
-      const { error } = await supabase
-        .from('presence')
-        .update({ status: 'ready' })
-        .match({ id: userId });
-
-      if (error) console.error('Error updating status:', error);
+      const partnerInfo = await findPartner();
+      if (partnerInfo) {
+        toast({
+          title: t("connected"),
+          description: t("connectedDesc"),
+        });
+      }
     } catch (error) {
       console.error("Error accessing media devices:", error);
     }
@@ -106,17 +172,27 @@ const Index = () => {
     setLocalStream(null);
     setIsInRoom(false);
 
-    // Обновляем статус пользователя обратно на "online"
     const { error } = await supabase
       .from('presence')
-      .update({ status: 'online' })
-      .match({ id: userId });
+      .update({ 
+        status: 'online',
+        is_waiting: false,
+        room_id: null,
+        partner_id: null
+      })
+      .eq('id', userId);
 
     if (error) console.error('Error updating status:', error);
   };
 
-  const handleNext = () => {
-    console.log("Looking for next partner...");
+  const handleNext = async () => {
+    const partnerInfo = await findPartner();
+    if (partnerInfo) {
+      toast({
+        title: t("connected"),
+        description: t("newPartner"),
+      });
+    }
   };
 
   return (

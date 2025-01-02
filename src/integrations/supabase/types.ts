@@ -12,17 +12,26 @@ export type Database = {
       presence: {
         Row: {
           id: string
+          is_waiting: boolean | null
           last_seen: string
+          partner_id: string | null
+          room_id: string | null
           status: string | null
         }
         Insert: {
           id: string
+          is_waiting?: boolean | null
           last_seen?: string
+          partner_id?: string | null
+          room_id?: string | null
           status?: string | null
         }
         Update: {
           id?: string
+          is_waiting?: boolean | null
           last_seen?: string
+          partner_id?: string | null
+          room_id?: string | null
           status?: string | null
         }
         Relationships: []
