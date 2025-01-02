@@ -19,7 +19,7 @@ const VideoChatRoom: React.FC<VideoChatRoomProps> = ({
   onlineUsers,
 }) => {
   const { toast } = useToast();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
   const [hasVideo, setHasVideo] = useState(true);
