@@ -65,19 +65,19 @@ const VideoChatRoom: React.FC<VideoChatRoomProps> = ({
           table: 'presence',
         },
         async (payload: RealtimePostgresChangesPayload<PresenceRow>) => {
-          const newData = payload.new;
+          if (!payload.new) return;
           
-          if (newData.partner_id === userId) {
-            if (newData.sdp_offer && !newData.sdp_answer) {
-              await webRTCRef.current?.handleOffer(JSON.parse(newData.sdp_offer));
+          if (payload.new.partner_id === userId) {
+            if (payload.new.sdp_offer && !payload.new.sdp_answer) {
+              await webRTCRef.current?.handleOffer(JSON.parse(payload.new.sdp_offer));
             }
-            if (newData.ice_candidate) {
-              await webRTCRef.current?.handleIceCandidate(JSON.parse(newData.ice_candidate));
+            if (payload.new.ice_candidate) {
+              await webRTCRef.current?.handleIceCandidate(JSON.parse(payload.new.ice_candidate));
             }
           }
 
-          if (newData.id === userId && newData.partner_id) {
-            webRTCRef.current?.setRoomInfo(newData.room_id || '', newData.partner_id);
+          if (payload.new.id === userId && payload.new.partner_id) {
+            webRTCRef.current?.setRoomInfo(payload.new.room_id || '', payload.new.partner_id);
             await webRTCRef.current?.createOffer();
           }
         }
