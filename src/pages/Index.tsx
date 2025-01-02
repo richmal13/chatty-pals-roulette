@@ -27,6 +27,14 @@ const Index = () => {
 
   useEffect(() => {
     const updatePresence = async () => {
+      // Удаляем старые записи
+      const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+      await supabase
+        .from('presence')
+        .delete()
+        .lt('last_seen', tenMinutesAgo);
+
+      // Обновляем или создаем нашу запись
       const { error } = await supabase
         .from('presence')
         .upsert({ 
@@ -55,10 +63,14 @@ const Index = () => {
           const { data, error } = await supabase
             .from('presence')
             .select('*')
-            .gte('last_seen', new Date(Date.now() - 60000).toISOString());
+            .gte('last_seen', new Date(Date.now() - 30000).toISOString());
           
           if (!error && data) {
-            setOnlineUsers(data.length);
+            const activeUsers = data.filter(user => 
+              user.status === 'online' && 
+              new Date(user.last_seen).getTime() > Date.now() - 30000
+            );
+            setOnlineUsers(activeUsers.length);
           }
         }
       )
@@ -77,73 +89,6 @@ const Index = () => {
     };
   }, [userId]);
 
-  const findPartner = async () => {
-    // Ищем пользователя, который ожидает партнера
-    const { data: waitingUsers, error: findError } = await supabase
-      .from('presence')
-      .select('*')
-      .eq('is_waiting', true)
-      .neq('id', userId)
-      .gte('last_seen', new Date(Date.now() - 30000).toISOString())
-      .limit(1);
-
-    if (findError) {
-      console.error('Error finding partner:', findError);
-      return null;
-    }
-
-    if (waitingUsers && waitingUsers.length > 0) {
-      const partner = waitingUsers[0];
-      const roomId = `room_${Math.random().toString(36).substring(7)}`;
-
-      // Обновляем статус обоих пользователей
-      const updates = [
-        {
-          id: userId,
-          room_id: roomId,
-          is_waiting: false,
-          partner_id: partner.id
-        },
-        {
-          id: partner.id,
-          room_id: roomId,
-          is_waiting: false,
-          partner_id: userId
-        }
-      ];
-
-      for (const update of updates) {
-        const { error: updateError } = await supabase
-          .from('presence')
-          .update(update)
-          .eq('id', update.id);
-
-        if (updateError) {
-          console.error('Error updating user status:', updateError);
-          return null;
-        }
-      }
-
-      return { roomId, partnerId: partner.id };
-    }
-
-    // Если партнер не найден, устанавливаем статус ожидания
-    const { error: waitError } = await supabase
-      .from('presence')
-      .update({ 
-        is_waiting: true,
-        room_id: null,
-        partner_id: null
-      })
-      .eq('id', userId);
-
-    if (waitError) {
-      console.error('Error updating waiting status:', waitError);
-    }
-
-    return null;
-  };
-
   const handleJoin = async (settings: { video: boolean; audio: boolean }) => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -153,15 +98,22 @@ const Index = () => {
       setLocalStream(stream);
       setIsInRoom(true);
 
-      const partnerInfo = await findPartner();
-      if (partnerInfo) {
-        toast({
-          title: t("connected"),
-          description: t("connectedDesc"),
-        });
-      }
+      await supabase
+        .from('presence')
+        .update({ 
+          status: 'online',
+          is_waiting: true,
+          last_seen: new Date().toISOString()
+        })
+        .eq('id', userId);
+
     } catch (error) {
       console.error("Error accessing media devices:", error);
+      toast({
+        title: t("error"),
+        description: t("mediaAccessError"),
+        variant: "destructive",
+      });
     }
   };
 
@@ -172,7 +124,7 @@ const Index = () => {
     setLocalStream(null);
     setIsInRoom(false);
 
-    const { error } = await supabase
+    await supabase
       .from('presence')
       .update({ 
         status: 'online',
@@ -181,18 +133,17 @@ const Index = () => {
         partner_id: null
       })
       .eq('id', userId);
-
-    if (error) console.error('Error updating status:', error);
   };
 
   const handleNext = async () => {
-    const partnerInfo = await findPartner();
-    if (partnerInfo) {
-      toast({
-        title: t("connected"),
-        description: t("newPartner"),
-      });
-    }
+    await supabase
+      .from('presence')
+      .update({ 
+        is_waiting: true,
+        room_id: null,
+        partner_id: null
+      })
+      .eq('id', userId);
   };
 
   return (
