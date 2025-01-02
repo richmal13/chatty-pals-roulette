@@ -4,6 +4,17 @@ import { Button } from "@/components/ui/button";
 import { Mic, MicOff } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 
+// Add type definitions for the Web Speech API
+interface IWindow extends Window {
+  webkitSpeechRecognition: any;
+}
+
+declare global {
+  interface Window {
+    webkitSpeechRecognition: any;
+  }
+}
+
 interface VoiceTranslationProps {
   targetLanguage: string;
   onTranslatedText: (text: string) => void;
@@ -14,20 +25,20 @@ const VoiceTranslation: React.FC<VoiceTranslationProps> = ({
   onTranslatedText,
 }) => {
   const [isListening, setIsListening] = useState(false);
-  const [recognition, setRecognition] = useState<SpeechRecognition | null>(null);
+  const [recognition, setRecognition] = useState<any>(null);
   const { language } = useLanguage();
   const { toast } = useToast();
 
   useEffect(() => {
     if ("webkitSpeechRecognition" in window) {
-      const recognition = new webkitSpeechRecognition();
+      const recognition = new (window as any).webkitSpeechRecognition();
       recognition.continuous = true;
       recognition.interimResults = true;
       recognition.lang = language === "en" ? "en-US" : 
                         language === "es" ? "es-ES" :
                         language === "pt" ? "pt-BR" : "ru-RU";
 
-      recognition.onresult = async (event) => {
+      recognition.onresult = async (event: any) => {
         const last = event.results.length - 1;
         const text = event.results[last][0].transcript;
 
@@ -60,7 +71,7 @@ const VoiceTranslation: React.FC<VoiceTranslationProps> = ({
         }
       };
 
-      recognition.onerror = (event) => {
+      recognition.onerror = (event: any) => {
         console.error("Speech recognition error:", event.error);
         setIsListening(false);
         toast({
