@@ -4,6 +4,8 @@ import { Video, VideoOff, SkipForward } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { useLanguage } from "@/contexts/LanguageContext";
 import VoiceTranslation from "./VoiceTranslation";
+import { WebRTCConnection } from "@/utils/webRTC";
+import { supabase } from "@/integrations/supabase/client";
 
 interface VideoChatRoomProps {
   localStream: MediaStream | null;
@@ -25,27 +27,63 @@ const VideoChatRoom: React.FC<VideoChatRoomProps> = ({
   const [hasVideo, setHasVideo] = useState(true);
   const [isSearching, setIsSearching] = useState(true);
   const [recognizedText, setRecognizedText] = useState<string>("");
+  const webRTCRef = useRef<WebRTCConnection | null>(null);
+  const [userId] = useState(() => Math.random().toString(36).substring(7));
 
   useEffect(() => {
     if (localVideoRef.current && localStream) {
       localVideoRef.current.srcObject = localStream;
-    }
-
-    if (onlineUsers <= 1) {
-      setIsSearching(true);
-      return;
-    }
-
-    const timeout = setTimeout(() => {
-      setIsSearching(false);
-      toast({
-        title: t("connected"),
-        description: t("connectedDesc"),
+      
+      // Initialize WebRTC connection
+      webRTCRef.current = new WebRTCConnection(userId, (remoteStream) => {
+        if (remoteVideoRef.current) {
+          remoteVideoRef.current.srcObject = remoteStream;
+        }
       });
-    }, Math.random() * 2000 + 1000);
+      webRTCRef.current.addLocalStream(localStream);
+    }
 
-    return () => clearTimeout(timeout);
-  }, [localStream, onlineUsers]);
+    return () => {
+      webRTCRef.current?.cleanup();
+    };
+  }, [localStream, userId]);
+
+  useEffect(() => {
+    if (!webRTCRef.current) return;
+
+    const channel = supabase
+      .channel('presence_rtc')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'presence',
+        },
+        async (payload) => {
+          const { new: newData } = payload;
+          
+          if (newData.partner_id === userId) {
+            if (newData.sdp_offer && !newData.sdp_answer) {
+              await webRTCRef.current?.handleOffer(JSON.parse(newData.sdp_offer));
+            }
+            if (newData.ice_candidate) {
+              await webRTCRef.current?.handleIceCandidate(JSON.parse(newData.ice_candidate));
+            }
+          }
+
+          if (newData.id === userId && newData.partner_id) {
+            webRTCRef.current?.setRoomInfo(newData.room_id, newData.partner_id);
+            await webRTCRef.current?.createOffer();
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [userId]);
 
   const toggleVideo = () => {
     if (localStream) {
@@ -59,14 +97,8 @@ const VideoChatRoom: React.FC<VideoChatRoomProps> = ({
 
   const handleNext = () => {
     setIsSearching(true);
+    webRTCRef.current?.cleanup();
     onNext();
-    setTimeout(() => {
-      setIsSearching(false);
-      toast({
-        title: t("connected"),
-        description: t("newPartner"),
-      });
-    }, Math.random() * 2000 + 1000);
   };
 
   const handleRecognizedText = (text: string) => {
