@@ -6,7 +6,7 @@ import { Moon, Sun, Globe2 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Language } from "@/utils/translations";
-import { supabase } from "@/lib/supabase";
+import { supabase } from "@/integrations/supabase/client";
 import {
   Select,
   SelectContent,
