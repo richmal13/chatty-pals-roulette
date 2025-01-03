@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Video, VideoOff, SkipForward, Copy, Check } from "lucide-react";
+import { Video, VideoOff, SkipForward } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { useLanguage } from "@/contexts/LanguageContext";
 import VoiceTranslation from "./VoiceTranslation";
@@ -9,6 +9,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Database } from "@/integrations/supabase/types";
 import { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
 import { useLocation } from "react-router-dom";
+import VideoDisplay from "./VideoDisplay";
+import InviteLink from "./InviteLink";
 
 type PresenceRow = Database['public']['Tables']['presence']['Row'];
 
@@ -26,7 +28,7 @@ const VideoChatRoom: React.FC<VideoChatRoomProps> = ({
   onlineUsers,
 }) => {
   const { toast } = useToast();
-  const { t, language } = useLanguage();
+  const { t } = useLanguage();
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
   const [hasVideo, setHasVideo] = useState(true);
@@ -55,11 +57,13 @@ const VideoChatRoom: React.FC<VideoChatRoomProps> = ({
       localVideoRef.current.srcObject = localStream;
       
       webRTCRef.current = new WebRTCConnection(userId, (remoteStream) => {
+        console.log("Received remote stream in component", remoteStream);
         if (remoteVideoRef.current) {
           remoteVideoRef.current.srcObject = remoteStream;
           setIsSearching(false);
         }
       });
+
       webRTCRef.current.addLocalStream(localStream);
 
       // Create or join room
@@ -75,6 +79,7 @@ const VideoChatRoom: React.FC<VideoChatRoomProps> = ({
           .single()
           .then(({ data, error }) => {
             if (data && !error) {
+              console.log("Joining room", { joinRoomId, hostId: data.id });
               webRTCRef.current?.setRoomInfo(joinRoomId, data.id);
               webRTCRef.current?.createOffer();
             }
@@ -113,16 +118,21 @@ const VideoChatRoom: React.FC<VideoChatRoomProps> = ({
           const newData = payload.new as PresenceRow;
           if (!newData) return;
           
+          console.log("Received presence update", newData);
+          
           if (newData.partner_id === userId) {
             if (newData.sdp_offer && !newData.sdp_answer) {
+              console.log("Handling offer from partner");
               await webRTCRef.current?.handleOffer(JSON.parse(newData.sdp_offer));
             }
             if (newData.ice_candidate) {
+              console.log("Handling ICE candidate from partner");
               await webRTCRef.current?.handleIceCandidate(JSON.parse(newData.ice_candidate));
             }
           }
 
           if (newData.id === userId && newData.partner_id) {
+            console.log("Partner assigned, creating offer");
             webRTCRef.current?.setRoomInfo(newData.room_id || '', newData.partner_id);
             await webRTCRef.current?.createOffer();
           }
@@ -157,66 +167,24 @@ const VideoChatRoom: React.FC<VideoChatRoomProps> = ({
 
   return (
     <div className="flex flex-col items-center gap-6 p-4">
-      <div className="w-full max-w-xl bg-card p-4 rounded-lg shadow mb-4">
-        <div className="flex items-center gap-2">
-          <input 
-            type="text" 
-            value={inviteLink} 
-            readOnly 
-            className="flex-1 px-3 py-2 rounded bg-muted text-sm"
-          />
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={copyInviteLink}
-            className="shrink-0"
-          >
-            {copied ? (
-              <Check className="h-4 w-4" />
-            ) : (
-              <Copy className="h-4 w-4" />
-            )}
-          </Button>
-        </div>
-      </div>
+      <InviteLink
+        inviteLink={inviteLink}
+        copied={copied}
+        onCopy={copyInviteLink}
+      />
 
       <div className="relative w-full max-w-6xl grid grid-cols-2 gap-4">
-        <div className="relative aspect-video rounded-lg overflow-hidden bg-muted">
-          <video
-            ref={localVideoRef}
-            autoPlay
-            playsInline
-            muted
-            className="w-full h-full object-cover"
-          />
-          {!hasVideo && (
-            <div className="absolute inset-0 flex items-center justify-center bg-muted">
-              <VideoOff className="w-16 h-16 text-muted-foreground" />
-            </div>
-          )}
-          {recognizedText && (
-            <div className="absolute bottom-0 left-0 right-0 p-4 bg-black/50 text-white">
-              {recognizedText}
-            </div>
-          )}
-        </div>
-
-        <div className="relative aspect-video rounded-lg overflow-hidden bg-muted">
-          {isSearching ? (
-            <div className="absolute inset-0 flex items-center justify-center bg-muted">
-              <div className="text-center">
-                <p className="text-muted-foreground">{t("waitingForPartner")}</p>
-              </div>
-            </div>
-          ) : (
-            <video
-              ref={remoteVideoRef}
-              autoPlay
-              playsInline
-              className="w-full h-full object-cover"
-            />
-          )}
-        </div>
+        <VideoDisplay
+          videoRef={localVideoRef}
+          isLocal={true}
+          hasVideo={hasVideo}
+          recognizedText={recognizedText}
+        />
+        <VideoDisplay
+          videoRef={remoteVideoRef}
+          isSearching={isSearching}
+          waitingMessage={t("waitingForPartner")}
+        />
       </div>
 
       <div className="flex gap-4">
@@ -233,7 +201,7 @@ const VideoChatRoom: React.FC<VideoChatRoomProps> = ({
           )}
         </Button>
         <VoiceTranslation
-          targetLanguage={language}
+          targetLanguage={t("language")}
           onTranslatedText={handleRecognizedText}
         />
         <Button onClick={handleNext} className="gap-2">
