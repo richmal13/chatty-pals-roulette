@@ -4,6 +4,8 @@
 
 **URL**: https://lovable.dev/projects/e52d9330-bf73-40cd-80bb-4a1783839864
 
+**Last updated**: ${new Date().toISOString()}
+
 ## How can I edit this code?
 
 There are several ways of editing your application.
