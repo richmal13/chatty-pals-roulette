@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Video, VideoOff, SkipForward } from "lucide-react";
+import { Video, VideoOff, SkipForward, Copy, Check } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { useLanguage } from "@/contexts/LanguageContext";
 import VoiceTranslation from "./VoiceTranslation";
@@ -8,6 +8,7 @@ import { WebRTCConnection } from "@/utils/webRTC";
 import { supabase } from "@/integrations/supabase/client";
 import { Database } from "@/integrations/supabase/types";
 import { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
+import { useLocation } from "react-router-dom";
 
 type PresenceRow = Database['public']['Tables']['presence']['Row'];
 
@@ -33,6 +34,21 @@ const VideoChatRoom: React.FC<VideoChatRoomProps> = ({
   const [recognizedText, setRecognizedText] = useState<string>("");
   const webRTCRef = useRef<WebRTCConnection | null>(null);
   const [userId] = useState(() => Math.random().toString(36).substring(7));
+  const [roomId] = useState(() => `room_${Math.random().toString(36).substring(7)}`);
+  const [copied, setCopied] = useState(false);
+  const location = useLocation();
+
+  const inviteLink = `${window.location.origin}?room=${roomId}`;
+
+  const copyInviteLink = () => {
+    navigator.clipboard.writeText(inviteLink);
+    setCopied(true);
+    toast({
+      title: t("linkCopied"),
+      description: t("linkCopiedDesc"),
+    });
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   useEffect(() => {
     if (localVideoRef.current && localStream) {
@@ -45,12 +61,41 @@ const VideoChatRoom: React.FC<VideoChatRoomProps> = ({
         }
       });
       webRTCRef.current.addLocalStream(localStream);
+
+      // Create or join room
+      const searchParams = new URLSearchParams(location.search);
+      const joinRoomId = searchParams.get('room');
+      
+      if (joinRoomId) {
+        // Joining existing room
+        supabase
+          .from('presence')
+          .select('*')
+          .eq('room_id', joinRoomId)
+          .single()
+          .then(({ data, error }) => {
+            if (data && !error) {
+              webRTCRef.current?.setRoomInfo(joinRoomId, data.id);
+              webRTCRef.current?.createOffer();
+            }
+          });
+      } else {
+        // Creating new room
+        supabase
+          .from('presence')
+          .insert({
+            id: userId,
+            room_id: roomId,
+            is_waiting: true,
+            last_seen: new Date().toISOString()
+          });
+      }
     }
 
     return () => {
       webRTCRef.current?.cleanup();
     };
-  }, [localStream, userId]);
+  }, [localStream, userId, roomId, location.search]);
 
   useEffect(() => {
     if (!webRTCRef.current) return;
@@ -112,6 +157,29 @@ const VideoChatRoom: React.FC<VideoChatRoomProps> = ({
 
   return (
     <div className="flex flex-col items-center gap-6 p-4">
+      <div className="w-full max-w-xl bg-card p-4 rounded-lg shadow mb-4">
+        <div className="flex items-center gap-2">
+          <input 
+            type="text" 
+            value={inviteLink} 
+            readOnly 
+            className="flex-1 px-3 py-2 rounded bg-muted text-sm"
+          />
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={copyInviteLink}
+            className="shrink-0"
+          >
+            {copied ? (
+              <Check className="h-4 w-4" />
+            ) : (
+              <Copy className="h-4 w-4" />
+            )}
+          </Button>
+        </div>
+      </div>
+
       <div className="relative w-full max-w-6xl grid grid-cols-2 gap-4">
         <div className="relative aspect-video rounded-lg overflow-hidden bg-muted">
           <video
@@ -137,14 +205,7 @@ const VideoChatRoom: React.FC<VideoChatRoomProps> = ({
           {isSearching ? (
             <div className="absolute inset-0 flex items-center justify-center bg-muted">
               <div className="text-center">
-                {onlineUsers <= 1 ? (
-                  <p className="text-muted-foreground">{t("noUsersOnline")}</p>
-                ) : (
-                  <>
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-                    <p className="text-muted-foreground">{t("findingPartner")}</p>
-                  </>
-                )}
+                <p className="text-muted-foreground">{t("waitingForPartner")}</p>
               </div>
             </div>
           ) : (
