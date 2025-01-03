@@ -5,6 +5,11 @@ import { useToast } from "@/components/ui/use-toast";
 import { useLanguage } from "@/contexts/LanguageContext";
 import VoiceTranslation from "./VoiceTranslation";
 import { WebRTCConnection } from "@/utils/webRTC";
+import { supabase } from "@/integrations/supabase/client";
+import { Database } from "@/integrations/supabase/types";
+import { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
+
+type PresenceRow = Database['public']['Tables']['presence']['Row'];
 
 interface VideoChatRoomProps {
   localStream: MediaStream | null;
@@ -39,24 +44,51 @@ const VideoChatRoom: React.FC<VideoChatRoomProps> = ({
           setIsSearching(false);
         }
       });
-
-      // Initialize WebRTC connection
-      webRTCRef.current.initialize().then(() => {
-        webRTCRef.current?.addLocalStream(localStream);
-      }).catch((error) => {
-        console.error('Failed to initialize WebRTC:', error);
-        toast({
-          title: t("error"),
-          description: t("connectionError"),
-          variant: "destructive",
-        });
-      });
+      webRTCRef.current.addLocalStream(localStream);
     }
 
     return () => {
       webRTCRef.current?.cleanup();
     };
-  }, [localStream, userId, toast, t]);
+  }, [localStream, userId]);
+
+  useEffect(() => {
+    if (!webRTCRef.current) return;
+
+    const channel = supabase
+      .channel('presence_rtc')
+      .on<PresenceRow>(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'presence',
+        },
+        async (payload: RealtimePostgresChangesPayload<PresenceRow>) => {
+          const newData = payload.new as PresenceRow;
+          if (!newData) return;
+          
+          if (newData.partner_id === userId) {
+            if (newData.sdp_offer && !newData.sdp_answer) {
+              await webRTCRef.current?.handleOffer(JSON.parse(newData.sdp_offer));
+            }
+            if (newData.ice_candidate) {
+              await webRTCRef.current?.handleIceCandidate(JSON.parse(newData.ice_candidate));
+            }
+          }
+
+          if (newData.id === userId && newData.partner_id) {
+            webRTCRef.current?.setRoomInfo(newData.room_id || '', newData.partner_id);
+            await webRTCRef.current?.createOffer();
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [userId]);
 
   const toggleVideo = () => {
     if (localStream) {
