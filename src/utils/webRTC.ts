@@ -1,4 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
+import { Database } from "@/integrations/supabase/types";
+
+type PresenceRow = Database['public']['Tables']['presence']['Row'];
 
 export class WebRTCConnection {
   private peerConnection: RTCPeerConnection;
@@ -8,144 +11,82 @@ export class WebRTCConnection {
 
   constructor(
     userId: string,
-    private onRemoteStream: (stream: MediaStream) => void,
-    private onError: (error: string) => void
+    private onRemoteStream: (stream: MediaStream) => void
   ) {
     this.userId = userId;
-    this.initialize();
-  }
-
-  private async initialize() {
-    try {
-      const { data, error } = await supabase.functions.invoke('dtelecom', {
-        body: { action: 'createRoom' }
-      });
-
-      if (error) {
-        console.error('Error initializing dTelecom:', error);
-        this.onError('Failed to initialize video chat');
-        return;
-      }
-
-      this.roomId = data.roomId;
-      this.setupWebRTC(data.configuration);
-    } catch (error) {
-      console.error('Error initializing dTelecom:', error);
-      this.onError('Failed to initialize video chat');
-    }
-  }
-
-  private setupWebRTC(configuration: RTCConfiguration) {
-    this.peerConnection = new RTCPeerConnection(configuration);
+    this.peerConnection = new RTCPeerConnection({
+      iceServers: [
+        { urls: "stun:stun.l.google.com:19302" },
+        { urls: "stun:stun1.l.google.com:19302" },
+      ],
+    });
 
     this.peerConnection.ontrack = (event) => {
       this.onRemoteStream(event.streams[0]);
     };
 
-    this.peerConnection.onicecandidate = async (event) => {
+    this.peerConnection.onicecandidate = (event) => {
       if (event.candidate) {
-        try {
-          await this.sendIceCandidate(event.candidate);
-        } catch (error) {
-          console.error('Error sending ICE candidate:', error);
-        }
+        this.sendIceCandidate(event.candidate);
       }
     };
   }
 
   private async sendIceCandidate(candidate: RTCIceCandidate) {
-    if (!this.roomId) return;
-
-    try {
-      await supabase.functions.invoke('dtelecom', {
-        body: {
-          action: 'sendCandidate',
-          roomId: this.roomId,
-          candidate
-        }
-      });
-    } catch (error) {
-      console.error('Error sending ICE candidate:', error);
-    }
+    await supabase.from("presence").update({
+      ice_candidate: JSON.stringify(candidate),
+      ice_candidate_timestamp: new Date().toISOString(),
+    }).eq("id", this.userId);
   }
 
   async addLocalStream(stream: MediaStream) {
-    if (!this.peerConnection) return;
-    
     stream.getTracks().forEach((track) => {
       this.peerConnection.addTrack(track, stream);
     });
   }
 
   async createOffer() {
-    if (!this.peerConnection) return;
-
     try {
       const offer = await this.peerConnection.createOffer();
       await this.peerConnection.setLocalDescription(offer);
 
-      const { error } = await supabase.functions.invoke('dtelecom', {
-        body: {
-          action: 'sendOffer',
-          roomId: this.roomId,
-          offer
-        }
-      });
-
-      if (error) {
-        console.error('Error sending offer:', error);
-        this.onError('Failed to establish connection');
-      }
+      await supabase.from("presence").update({
+        sdp_offer: JSON.stringify(offer),
+        sdp_offer_timestamp: new Date().toISOString(),
+      }).eq("id", this.userId);
     } catch (error) {
-      console.error('Error creating offer:', error);
-      this.onError('Failed to establish connection');
+      console.error("Error creating offer:", error);
     }
   }
 
   async handleAnswer(answer: RTCSessionDescriptionInit) {
-    if (!this.peerConnection) return;
-
     try {
       await this.peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
     } catch (error) {
-      console.error('Error handling answer:', error);
-      this.onError('Failed to establish connection');
+      console.error("Error handling answer:", error);
     }
   }
 
   async handleIceCandidate(candidate: RTCIceCandidateInit) {
-    if (!this.peerConnection) return;
-
     try {
       await this.peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
     } catch (error) {
-      console.error('Error handling ICE candidate:', error);
+      console.error("Error handling ICE candidate:", error);
     }
   }
 
   async handleOffer(offer: RTCSessionDescriptionInit) {
-    if (!this.peerConnection) return;
-
     try {
       await this.peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
       const answer = await this.peerConnection.createAnswer();
       await this.peerConnection.setLocalDescription(answer);
 
-      const { error } = await supabase.functions.invoke('dtelecom', {
-        body: {
-          action: 'sendAnswer',
-          roomId: this.roomId,
-          answer
-        }
-      });
-
-      if (error) {
-        console.error('Error sending answer:', error);
-        this.onError('Failed to establish connection');
-      }
+      await supabase.from("presence").update({
+        sdp_answer: JSON.stringify(answer),
+        sdp_answer_timestamp: new Date().toISOString(),
+      }).eq("id", this.userId);
     } catch (error) {
-      console.error('Error handling offer:', error);
-      this.onError('Failed to establish connection');
+      console.error("Error handling offer:", error);
     }
   }
 
@@ -155,8 +96,6 @@ export class WebRTCConnection {
   }
 
   cleanup() {
-    if (this.peerConnection) {
-      this.peerConnection.close();
-    }
+    this.peerConnection.close();
   }
 }

@@ -1,84 +1,65 @@
-export type Language = "en" | "es" | "pt" | "ru";
-
-type TranslationKey =
-  | "error"
-  | "title"
-  | "subtitle"
-  | "onlineUsers"
-  | "findingPartner"
-  | "connected"
-  | "connectedDesc"
-  | "newPartner"
-  | "joinNow"
-  | "next"
-  | "leave"
-  | "noUsersOnline"
-  | "mediaAccessError"
-  | "connectionError";
-
-export const translations: Record<Language, Record<TranslationKey, string>> = {
+export const translations = {
   en: {
-    error: "Error",
-    title: "Video Chat",
-    subtitle: "Connect with people around the world",
-    onlineUsers: "users online",
-    findingPartner: "Finding a chat partner...",
+    title: "Video Chat Roulette",
+    subtitle: "Meet new people through random video chats",
+    onlineUsers: "Users Online",
+    findingPartner: "Finding a partner...",
     connected: "Connected!",
-    connectedDesc: "You are now connected with a chat partner",
-    newPartner: "Connected to a new partner",
+    connectedDesc: "You're now chatting with a stranger.",
+    newPartner: "You're now chatting with a new stranger.",
     joinNow: "Join Now",
     next: "Next",
     leave: "Leave",
-    noUsersOnline: "No users online",
-    mediaAccessError: "Could not access camera or microphone",
-    connectionError: "Failed to establish connection. Please try again.",
+    noUsersOnline: "No users online at the moment. Please wait for someone to join.",
+    error: "Error",
+    mediaAccessError: "Error accessing media devices. Please check your camera and microphone permissions.",
   },
   es: {
-    error: "Error",
-    title: "Video Chat",
-    subtitle: "Conéctate con personas de todo el mundo",
-    onlineUsers: "usuarios en línea",
-    findingPartner: "Buscando un compañero de chat...",
+    title: "Ruleta de Video Chat",
+    subtitle: "Conoce gente nueva a través de video chats aleatorios",
+    onlineUsers: "Usuarios en línea",
+    findingPartner: "Buscando pareja...",
     connected: "¡Conectado!",
-    connectedDesc: "Ahora estás conectado con un compañero de chat",
-    newPartner: "Conectado a un nuevo compañero",
+    connectedDesc: "Ahora estás chateando con un desconocido.",
+    newPartner: "Ahora estás chateando con un nuevo desconocido.",
     joinNow: "Unirse ahora",
     next: "Siguiente",
     leave: "Salir",
-    noUsersOnline: "No hay usuarios en línea",
-    mediaAccessError: "No se pudo acceder a la cámara o micrófono",
-    connectionError: "Error al establecer la conexión. Por favor, inténtalo de nuevo.",
+    noUsersOnline: "No hay usuarios en línea en este momento. Espera a que alguien se una.",
+    error: "Error",
+    mediaAccessError: "Error al acceder a los dispositivos multimedia. Por favor, verifica los permisos de tu cámara y micrófono.",
   },
   pt: {
-    error: "Erro",
-    title: "Video Chat",
-    subtitle: "Conecte-se com pessoas ao redor do mundo",
-    onlineUsers: "usuários online",
-    findingPartner: "Procurando um parceiro de chat...",
+    title: "Roleta de Video Chat",
+    subtitle: "Conheça novas pessoas através de video chats aleatórios",
+    onlineUsers: "Usuários Online",
+    findingPartner: "Procurando parceiro...",
     connected: "Conectado!",
-    connectedDesc: "Você está agora conectado com um parceiro de chat",
-    newPartner: "Conectado a um novo parceiro",
+    connectedDesc: "Você está conversando com um desconhecido.",
+    newPartner: "Você está conversando com um novo desconhecido.",
     joinNow: "Entrar Agora",
     next: "Próximo",
     leave: "Sair",
-    noUsersOnline: "Nenhum usuário online",
-    mediaAccessError: "Não foi possível acessar a câmera ou microfone",
-    connectionError: "Falha ao estabelecer conexão. Por favor, tente novamente.",
+    noUsersOnline: "Não há usuários online no momento. Aguarde alguém entrar.",
+    error: "Erro",
+    mediaAccessError: "Erro ao acessar dispositivos de mídia. Verifique as permissões da sua câmera e microfone.",
   },
   ru: {
-    error: "Ошибка",
-    title: "Видеочат",
-    subtitle: "Общайтесь с людьми со всего мира",
-    onlineUsers: "пользователей онлайн",
+    title: "Видеочат Рулетка",
+    subtitle: "Встречайте новых людей через случайные видеочаты",
+    onlineUsers: "Пользователей онлайн",
     findingPartner: "Поиск собеседника...",
     connected: "Подключено!",
-    connectedDesc: "Вы подключены к собеседнику",
-    newPartner: "Подключен к новому собеседнику",
+    connectedDesc: "Вы общаетесь с незнакомцем.",
+    newPartner: "Вы общаетесь с новым незнакомцем.",
     joinNow: "Присоединиться",
     next: "Следующий",
     leave: "Выйти",
-    noUsersOnline: "Нет пользователей онлайн",
-    mediaAccessError: "Не удалось получить доступ к камере или микрофону",
-    connectionError: "Не удалось установить соединение. Пожалуйста, попробуйте снова.",
-  },
+    noUsersOnline: "Сейчас нет пользователей онлайн. Подождите, пока кто-нибудь присоединится.",
+    error: "Ошибка",
+    mediaAccessError: "Ошибка доступа к медиа-устройствам. Пожалуйста, проверьте разрешения для камеры и микрофона.",
+  }
 };
+
+export type Language = keyof typeof translations;
+export type TranslationKey = keyof typeof translations.en;
