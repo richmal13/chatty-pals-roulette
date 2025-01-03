@@ -1,27 +1,17 @@
 import { useState, useEffect } from "react";
 import VideoPreview from "@/components/VideoPreview";
 import VideoChatRoom from "@/components/VideoChatRoom";
-import { Button } from "@/components/ui/button";
-import { Moon, Sun, Globe2 } from "lucide-react";
-import { useTheme } from "next-themes";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { Language } from "@/utils/translations";
 import { supabase } from "@/integrations/supabase/client";
 import { usePartnerMatching } from "@/hooks/usePartnerMatching";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
+import Header from "@/components/Header";
+import TestConnectionButton from "@/components/TestConnectionButton";
 
 const Index = () => {
   const [isInRoom, setIsInRoom] = useState(false);
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
-  const { theme, setTheme } = useTheme();
-  const { language, setLanguage, t } = useLanguage();
+  const { t } = useLanguage();
   const [onlineUsers, setOnlineUsers] = useState(0);
   const [userId] = useState(() => Math.random().toString(36).substring(7));
   const { toast } = useToast();
@@ -166,43 +156,18 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background text-foreground transition-colors duration-300">
-      <header className="p-4 text-center relative">
-        <div className="absolute right-4 top-4 flex gap-2">
-          <Select
-            value={language}
-            onValueChange={(value: Language) => setLanguage(value)}
-          >
-            <SelectTrigger className="w-[140px]">
-              <Globe2 className="mr-2 h-4 w-4" />
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="en">English</SelectItem>
-              <SelectItem value="es">Español</SelectItem>
-              <SelectItem value="pt">Português</SelectItem>
-              <SelectItem value="ru">Русский</SelectItem>
-            </SelectContent>
-          </Select>
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-          >
-            {theme === "dark" ? (
-              <Sun className="h-5 w-5" />
-            ) : (
-              <Moon className="h-5 w-5" />
-            )}
-          </Button>
-        </div>
-        <h1 className="text-3xl font-bold">{t("title")}</h1>
-        <p className="text-muted-foreground mt-2">{t("subtitle")}</p>
-        <p className="text-primary mt-2">
-          {onlineUsers} {t("onlineUsers")}
-        </p>
-      </header>
-
+      <Header />
       <main className="container mx-auto">
+        <div className="flex justify-center mb-4">
+          <p className="text-primary">
+            {onlineUsers} {t("onlineUsers")}
+          </p>
+        </div>
+        
+        <div className="flex justify-center mb-4">
+          <TestConnectionButton userId={userId} />
+        </div>
+
         {!isInRoom ? (
           <VideoPreview onJoin={handleJoin} />
         ) : (
