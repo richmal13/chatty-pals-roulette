@@ -1,1 +1,4 @@
 project_id = "obaciqwsgwfbbnphgqyk"
+
+[functions.dtelecom]
+verify_jwt = false

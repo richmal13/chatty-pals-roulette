@@ -1,101 +1,80 @@
 import { supabase } from "@/integrations/supabase/client";
-import { Database } from "@/integrations/supabase/types";
-
-type PresenceRow = Database['public']['Tables']['presence']['Row'];
 
 export class WebRTCConnection {
-  private peerConnection: RTCPeerConnection;
+  private client: any; // dTelecom client instance
   private roomId: string | null = null;
   private userId: string;
-  private partnerId: string | null = null;
+  private token: string | null = null;
 
   constructor(
     userId: string,
     private onRemoteStream: (stream: MediaStream) => void
   ) {
     this.userId = userId;
-    this.peerConnection = new RTCPeerConnection({
-      iceServers: [
-        { urls: "stun:stun.l.google.com:19302" },
-        { urls: "stun:stun1.l.google.com:19302" },
-      ],
-    });
-
-    this.peerConnection.ontrack = (event) => {
-      this.onRemoteStream(event.streams[0]);
-    };
-
-    this.peerConnection.onicecandidate = (event) => {
-      if (event.candidate) {
-        this.sendIceCandidate(event.candidate);
-      }
-    };
   }
 
-  private async sendIceCandidate(candidate: RTCIceCandidate) {
-    await supabase.from("presence").update({
-      ice_candidate: JSON.stringify(candidate),
-      ice_candidate_timestamp: new Date().toISOString(),
-    }).eq("id", this.userId);
+  async initialize() {
+    try {
+      // Create a room using our Edge Function
+      const { data: roomData, error: roomError } = await supabase.functions.invoke('dtelecom', {
+        body: { action: 'create-room' }
+      });
+
+      if (roomError) throw roomError;
+      this.roomId = roomData.room_id;
+
+      // Get access token
+      const { data: tokenData, error: tokenError } = await supabase.functions.invoke('dtelecom', {
+        body: { 
+          action: 'get-token',
+          roomId: this.roomId,
+          userId: this.userId
+        }
+      });
+
+      if (tokenError) throw tokenError;
+      this.token = tokenData.token;
+
+      // Initialize dTelecom client
+      this.client = new DTelecomClient({
+        url: 'wss://rtc.dtelecom.org',
+        token: this.token
+      });
+
+      // Set up event listeners
+      this.client.on('track', (track: MediaStreamTrack, stream: MediaStream) => {
+        this.onRemoteStream(stream);
+      });
+
+      await this.client.connect();
+      console.log('Connected to dTelecom room:', this.roomId);
+
+    } catch (error) {
+      console.error('Error initializing dTelecom:', error);
+      throw error;
+    }
   }
 
   async addLocalStream(stream: MediaStream) {
-    stream.getTracks().forEach((track) => {
-      this.peerConnection.addTrack(track, stream);
-    });
-  }
-
-  async createOffer() {
-    try {
-      const offer = await this.peerConnection.createOffer();
-      await this.peerConnection.setLocalDescription(offer);
-
-      await supabase.from("presence").update({
-        sdp_offer: JSON.stringify(offer),
-        sdp_offer_timestamp: new Date().toISOString(),
-      }).eq("id", this.userId);
-    } catch (error) {
-      console.error("Error creating offer:", error);
+    if (!this.client) {
+      throw new Error('Client not initialized');
     }
-  }
 
-  async handleAnswer(answer: RTCSessionDescriptionInit) {
     try {
-      await this.peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
+      await this.client.publish(stream);
+      console.log('Local stream published');
     } catch (error) {
-      console.error("Error handling answer:", error);
+      console.error('Error publishing stream:', error);
+      throw error;
     }
-  }
-
-  async handleIceCandidate(candidate: RTCIceCandidateInit) {
-    try {
-      await this.peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
-    } catch (error) {
-      console.error("Error handling ICE candidate:", error);
-    }
-  }
-
-  async handleOffer(offer: RTCSessionDescriptionInit) {
-    try {
-      await this.peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
-      const answer = await this.peerConnection.createAnswer();
-      await this.peerConnection.setLocalDescription(answer);
-
-      await supabase.from("presence").update({
-        sdp_answer: JSON.stringify(answer),
-        sdp_answer_timestamp: new Date().toISOString(),
-      }).eq("id", this.userId);
-    } catch (error) {
-      console.error("Error handling offer:", error);
-    }
-  }
-
-  setRoomInfo(roomId: string, partnerId: string) {
-    this.roomId = roomId;
-    this.partnerId = partnerId;
   }
 
   cleanup() {
-    this.peerConnection.close();
+    if (this.client) {
+      this.client.disconnect();
+      this.client = null;
+    }
+    this.roomId = null;
+    this.token = null;
   }
 }
